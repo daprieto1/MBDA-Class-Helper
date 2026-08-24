@@ -219,7 +219,73 @@ por ejemplo `MetodoPago` en vez de `TipoTarjeta`, y discutir cuál modela mejor 
 
 ---
 
-## 3. Supuestos explícitos (a discutir en clase)
+## 3. Modelo de Consultas
+
+El enunciado pide dos consultas con formato **COMO … QUIERO … PARA PODER …**: una **gerencial**
+(visión estratégica para la junta directiva) y una **operativa** (útil para un actor del ciclo de
+Compradores).
+
+---
+
+### 3.1 Consulta gerencial — Junta Directiva
+
+> **COMO** director de Amazon Marketplace
+> **QUIERO** conocer el ingreso total generado por categoría de producto, discriminado por tipo de
+> vendedor (independiente vs. empresarial) y país de origen, durante un periodo de tiempo
+> seleccionado
+> **PARA PODER** identificar las categorías y mercados más rentables y orientar la estrategia
+> comercial y de expansión de la plataforma.
+
+**Detalle del reporte:**
+
+| Columna | Descripción |
+|---|---|
+| Categoría | Categoría del producto (libros, ropa, muebles, etc.) |
+| Tipo de vendedor | Independiente o Empresarial |
+| País de origen | País del vendedor que registró el producto |
+| Cantidad de pedidos | Número total de pedidos finalizados en el periodo |
+| Ingreso total | Suma de los totales de los pedidos asociados |
+| Impuesto recaudado | Suma del impuesto de venta aplicado (cuando corresponde) |
+| Periodo | Rango de fechas seleccionado para el reporte |
+
+*Justificación: esta consulta agrega datos de Vendedor, Producto, Pedido e ImpuestoVenta, cruzando
+los cuatro dominios principales. Le permite a la junta directiva comparar el rendimiento por
+categoría y tipo de vendedor, y evaluar en qué países conviene invertir en crecimiento.*
+
+---
+
+### 3.2 Consulta operativa — Comprador (ciclo extendido)
+
+> **COMO** comprador registrado en Amazon Marketplace
+> **QUIERO** ver el detalle de mi carrito de compras actual, incluyendo los productos seleccionados
+> con su precio unitario, cantidad, subtotal por producto y el precio total calculado del carrito
+> **PARA PODER** revisar mi selección, ajustar cantidades o eliminar productos antes de confirmar
+> la compra y generar el pedido.
+
+**Detalle del reporte:**
+
+| Columna | Descripción |
+|---|---|
+| Código del carrito | Identificador alfanumérico de 5 caracteres |
+| Estado | EN_PROGRESO o FINALIZADO |
+| Fecha de creación | Fecha en que se creó el carrito |
+| Última modificación | Fecha de la última modificación del carrito |
+| Producto | Nombre del producto en el carrito |
+| Categoría | Categoría del producto |
+| Precio unitario | Precio por unidad del producto en este carrito |
+| Cantidad | Número de unidades seleccionadas |
+| Subtotal | Precio unitario x Cantidad (calculado) |
+| Método de pago | Método de pago asociado al carrito |
+| **Precio total** | Suma de todos los subtotales (atributo derivado) |
+
+*Justificación: esta consulta toca directamente las entidades del ciclo de Compradores
+(Comprador, CarritoDeCompras, ProductoEnCarrito, Producto) y refleja las reglas de negocio
+extendidas: el código generado, el estado enumerado, el precio total derivado y la clase de
+asociación ProductoEnCarrito con precio unitario y cantidad.*
+
+---
+
+## 4. Supuestos explícitos (a discutir en clase)
 
 El enunciado no lo dice todo — estas decisiones se tomaron y **deben señalarse como supuestos**,
 buena práctica de modelado que vale la pena resaltar a los estudiantes:
@@ -237,11 +303,11 @@ buena práctica de modelado que vale la pena resaltar a los estudiantes:
   asociación, aquí se simplifica como clase intermedia para compatibilidad con el renderizador.
 - **TarjetaCredito (0..1 desde Comprador)**: la relación se dejó en `0..1 -- 1..*` desde el lado de
   Comprador porque `Comprador "1"` ya está cubierto por la restricción "al menos una tarjeta" en el
-  lado de TarjetaCredito; ajusten si prefieren notación distinta.
+  lado de TarjetaCredito; ajusten si prefieren notación distinta.****
 
 ---
 
-## 4. Sugerencia de uso en clase
+## 5. Sugerencia de uso en clase
 
 1. Proyectar solo el **modelo reducido** y pedir a los estudiantes, en parejas, que enuncien 2-3
    reglas de negocio del texto que **no** se ven en el diagrama (ej. la generación del código del

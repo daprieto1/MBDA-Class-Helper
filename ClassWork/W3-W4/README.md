@@ -62,78 +62,34 @@ classDiagram
 
 ---
 
-## 2. Modelo conceptual extendido (con atributos, tipos y reglas de negocio)
+## 2. Modelo conceptual extendido — Ciclo Compradores (con atributos, tipos y reglas de negocio)
 
-Se incorpora todo lo anterior **más** las reglas de negocio específicas del ciclo de Compradores:
+Este modelo muestra **solo las clases del ciclo de Compradores**, tal como lo pide el parcial
+("modelo conceptual extendido de este ciclo"). `Producto` se incluye simplificado como clase de
+contexto porque `ProductoEnCarrito` lo referencia.
 
-1. Un comprador tiene mínimo un correo electrónico (máx. 250 caracteres cada uno) → se modela
-   `CorreoElectronico` como clase aparte (multivaluado), no como atributo simple.
-2. El estado del carrito es un **tipo enumerado**: `EN_PROGRESO` o `FINALIZADO`.
-3. El precio total del carrito es un **atributo derivado** (se calcula, no se almacena directo).
-4. El código del carrito es el identificador, generado automáticamente (5 caracteres alfanuméricos).
-5. El teléfono del comprador es **opcional** (0..1) y **único** (no se repite entre compradores).
-6. De cada producto dentro de un carrito se conoce **precio unitario** y **cantidad** → esto exige
-   una **clase de asociación** entre `CarritoDeCompras` y `Producto` (no puede ser un simple atributo
-   de ninguna de las dos clases, porque depende de la combinación carrito–producto).
+Se incorporan las 6 reglas de negocio del enunciado:
+
+1. **Correo electrónico multivaluado (máx. 250 caracteres)** → `CorreoElectronico` como clase
+   aparte con relación `1..*` desde `Comprador`. El límite se aplica al atributo `direccion : String`.
+2. **Estado del carrito: EN_PROGRESO o FINALIZADO** → Enumeración `EstadoCarrito` con
+   dependencia desde `CarritoDeCompras`.
+3. **Precio total del carrito es calculado** → Atributo derivado `/precioTotal : Decimal` en
+   `CarritoDeCompras` (suma de `precioUnitario × cantidad` de cada `ProductoEnCarrito`).
+4. **Código del carrito: identificador, 5 caracteres alfanuméricos aleatorios** → Atributo
+   `codigo : String` generado automáticamente.
+5. **Teléfono no obligatorio y único** → Atributo `telefono : String [0..1]` en `Comprador`,
+   con restricción de unicidad entre compradores.
+6. **Productos en carrito: precio unitario y cantidad** → Clase de asociación `ProductoEnCarrito`
+   entre `CarritoDeCompras` y `Producto`, con atributos `precioUnitario` y `cantidad`.
 
 ```mermaid
 classDiagram
-    class Vendedor {
-        +idVendedor : int
-        +nombres : String
-        +apellidos : String
-        +numeroIdentificacion : String
-        +tipoIdentificacion : String
-        +telefono : String
-        +paisOrigen : String
-        +direccionResidencia : String
-    }
-    class VendedorIndependiente {
-        +cuotaPorVentaRealizada : Decimal
-    }
-    class VendedorEmpresarial {
-        +valorSuscripcionMensual : Decimal
-    }
-    class Empresa {
-        +nombre : String
-        +tipoEmpresa : String
-        +numeroIdTributario : String
-    }
-    class Permiso {
-        +nombre : String
-        +entidadCertificadora : String
-        +archivo : String
-    }
-    class Producto {
-        +idProducto : int
-        +nombre : String
-        +descripcion : String
-        +categoria : String
-        +precio : Decimal
-    }
-    class ProductoTangible {
-        +unidadesDisponibles : int
-        +peso : Decimal
-        +estado : String
-    }
-    class ProductoDigital
-    class ImpuestoVenta {
-        +porcentaje : Decimal
-        +pais : String
-        +descripcion : String
-    }
-    class Garantia {
-        +duracionMeses : int
-        +cobertura : String
-        +tipoGarantia : String
-        +tiempoRespuestaMeses : int
-    }
-
     class Comprador {
         +idComprador : int
         +nombres : String
         +apellidos : String
-        +telefono : String
+        +telefono : String [0..1]
     }
     class CorreoElectronico {
         +direccion : String
@@ -151,7 +107,7 @@ classDiagram
         +codigo : String
         +fechaCreacion : Date
         +fechaUltimaModificacion : Date
-        +precioTotal : Decimal
+        +/precioTotal : Decimal
         +metodoPago : String
     }
     class EstadoCarrito {
@@ -162,6 +118,12 @@ classDiagram
     class ProductoEnCarrito {
         +precioUnitario : Decimal
         +cantidad : int
+    }
+    class Producto {
+        +idProducto : int
+        +nombre : String
+        +categoria : String
+        +precio : Decimal
     }
     class Pedido {
         +fecha : Date
@@ -182,18 +144,8 @@ classDiagram
         +cobertura : String
     }
 
-    Vendedor <|-- VendedorIndependiente
-    Vendedor <|-- VendedorEmpresarial
-    Empresa "1" *-- "1..*" VendedorEmpresarial : vendedores asociados
-    Vendedor "1" *-- "0..*" Permiso : carga
-    Vendedor "1" -- "0..*" Producto : registra
-    Producto <|-- ProductoTangible
-    Producto <|-- ProductoDigital
-    Producto "0..*" -- "0..1" ImpuestoVenta : puede aplicar
-    ProductoTangible "0..1" -- "0..1" Garantia : puede ofrecer
-
     Comprador "1" -- "1..*" CorreoElectronico : tiene
-    Comprador "0..1" -- "1..*" TarjetaCredito : respalda con
+    Comprador "1" -- "1..*" TarjetaCredito : respalda con
     TarjetaCredito ..> TipoTarjeta : usa
     Comprador "1" -- "1..*" CarritoDeCompras : tiene
     CarritoDeCompras ..> EstadoCarrito : usa
@@ -207,15 +159,19 @@ classDiagram
     Pedido "1" -- "0..*" ProteccionProducto : ofrece
 ```
 
-### Los dos tipos más importantes (respuesta de ejemplo)
+> **Nota sobre ProductoEnCarrito:** Es una **clase de asociación** entre `CarritoDeCompras` y
+> `Producto`. En UML se dibuja con línea punteada hacia la asociación; en Mermaid se modela como
+> clase intermedia conectada a ambos extremos.
+
+> **Nota sobre `/precioTotal`:** El prefijo `/` indica atributo **derivado** (calculado, no
+> almacenado). Se obtiene de `Σ(precioUnitario × cantidad)` de cada `ProductoEnCarrito`.
+
+### Los dos tipos más importantes
 
 | Tipo | Por qué es relevante en este ciclo |
 |---|---|
-| **`EstadoCarrito`** (enum: `EN_PROGRESO`, `FINALIZADO`) | Es una regla nueva explícita del enunciado y controla el ciclo de vida completo del carrito (cuándo puede seguir modificándose y cuándo ya generó un pedido). |
-| **`TipoTarjeta`** (enum: `VISA`, `MASTERCARD`, `AMEX`) | El comprador **debe** tener al menos una tarjeta de crédito como respaldo; clasificar el tipo de tarjeta es relevante para validar el medio de pago del carrito. |
-
-*(Nota didáctica: en clase se puede pedir a los estudiantes que propongan un segundo tipo distinto,
-por ejemplo `MetodoPago` en vez de `TipoTarjeta`, y discutir cuál modela mejor el negocio.)*
+| **`EstadoCarrito`** (enum: `EN_PROGRESO`, `FINALIZADO`) | Regla explícita del enunciado. Controla el ciclo de vida del carrito: solo un carrito `EN_PROGRESO` puede modificarse; al pasar a `FINALIZADO` genera un pedido. |
+| **`TipoTarjeta`** (enum: `VISA`, `MASTERCARD`, `AMEX`) | El comprador debe tener al menos una tarjeta de crédito como respaldo. Clasificar el tipo es relevante para validar el medio de pago y las pasarelas disponibles. |
 
 ---
 

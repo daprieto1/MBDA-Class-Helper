@@ -9,6 +9,7 @@ classDiagram
     class Cliente
     class ClientePublico
     class ClientePrivado
+    class EntidadGubernamental
     class Convenio
     class Vehiculo
     class Servicio
@@ -17,10 +18,13 @@ classDiagram
     class Novedad
     class Observacion
     class Licencia
+    class Mantenimiento
+    class Facturacion
 
     Cliente <|-- ClientePublico
     Cliente <|-- ClientePrivado
-    ClientePublico "1" -- "1..*" Convenio : establece
+    ClientePublico "1" -- "1" EntidadGubernamental : corresponde a
+    EntidadGubernamental "1" -- "1..*" Convenio : establece
     Cliente "1" -- "0..*" Servicio : solicita
     Servicio "1" -- "0..*" Novedad : presenta
     Servicio "1" -- "0..*" Asignacion : tiene
@@ -28,9 +32,15 @@ classDiagram
     Asignacion "*" -- "1" Conductor : asigna
     Conductor "1" -- "1..*" Licencia : posee
     Asignacion "1" -- "0..*" Observacion : registra
+    Vehiculo "1" -- "0..*" Mantenimiento : tiene
+    Servicio "1" -- "0..1" Facturacion : genera
 ```
 
+> **Nota sobre EntidadGubernamental:** El enunciado indica que los clientes públicos "corresponden a entidades gubernamentales" y que cada convenio "pertenece exclusivamente a una sola entidad". Se modela `EntidadGubernamental` como clase separada para hacer explícito que los convenios pertenecen a la entidad gubernamental (no directamente al cliente público), y que cada cliente público corresponde a exactamente una entidad gubernamental.
+
 > **Nota sobre herencia:** La jerarquía Cliente → ClientePublico / ClientePrivado es **{disjunta, completa}**: todo cliente es necesariamente público o privado (no mixto) y no existen clientes genéricos sin subtipo.
+
+> **Nota sobre Facturacion:** La relación `Servicio "1" -- "0..1" Facturacion` captura que un servicio puede tener a lo sumo una facturación. Sin embargo, la restricción de que **solo servicios en estado finalizado** pueden generarla es una regla de negocio (constraint `{estado = finalizado}`) que no se puede expresar únicamente con multiplicidades en el diagrama.
 
 > **Nota sobre Asignacion:** Conceptualmente actúa como una **clase de asociación** que vincula Servicio, Vehiculo y Conductor. Mermaid no soporta clases de asociación nativamente, por lo que se modela como una clase intermedia conectada a las tres entidades.
 
@@ -73,6 +83,8 @@ Los dos conceptos más relevantes son **Servicio** y **Asignacion**: el primero 
 
 ## Supuestos explícitos
 
+- **EntidadGubernamental como clase separada:** Aunque la relación entre ClientePublico y EntidadGubernamental es 1 a 1, se modelan como clases distintas porque el enunciado las presenta como conceptos diferenciables: el cliente público es quien solicita servicios, mientras que la entidad gubernamental es la organización a la que pertenecen los convenios. Esta separación permite expresar con claridad que los convenios se establecen a nivel de la entidad, no del cliente individual.
+
 - **Conductor como entidad independiente:** El enunciado menciona conductores en el contexto de asignaciones y licencias, pero no los describe en una sección dedicada. Se asume que Conductor es una entidad del dominio con identidad propia (nombre, datos de contacto, estado habilitado/inhabilitado).
 
 - **Licencia como entidad separada:** Se modela Licencia como entidad independiente de Conductor porque el enunciado indica que debe corresponder a la categoría del vehículo y estar vigente, lo que implica atributos propios (categoría, fecha de vencimiento). Un conductor puede poseer una o varias licencias (una por categoría vehicular).
@@ -81,9 +93,9 @@ Los dos conceptos más relevantes son **Servicio** y **Asignacion**: el primero 
 
 - **Multiplicidad Servicio–Asignacion (1 a 0..*):** Se asume que un servicio puede tener múltiples asignaciones a lo largo del tiempo (ej.: si una asignación se cancela y se crea una nueva con otro vehículo/conductor). En un momento dado, solo una asignación puede estar activa por servicio.
 
-- **No se modela Factura:** El enunciado menciona "facturación" como proceso derivado de servicios finalizados, pero no describe atributos ni relaciones de una entidad Factura. Se omite del modelo inicial por falta de información.
+- **Facturación como entidad separada:** El enunciado establece que "únicamente los servicios en estado finalizado pueden generar facturación". Se modela `Facturacion` como entidad independiente relacionada con Servicio (multiplicidad `0..1`: un servicio finalizado puede generar a lo sumo una facturación, y un servicio no finalizado no genera ninguna). La restricción de que solo servicios finalizados generan facturación es una regla de negocio que se documenta como constraint, ya que no es expresable solo con multiplicidades.
 
-- **No se modela Mantenimiento:** El estado "en mantenimiento" del vehículo se menciona como estado operativo, pero no se describe un proceso de mantenimiento con entidad propia. Se omite del modelo inicial.
+- **Mantenimiento como entidad separada:** El enunciado menciona "en mantenimiento" como estado operativo del vehículo. Se modela Mantenimiento como entidad independiente porque un vehículo puede tener múltiples mantenimientos a lo largo del tiempo, cada uno con identidad propia (fechas, tipo, estado). El estado "en mantenimiento" del vehículo se deriva de la existencia de un mantenimiento activo asociado.
 
 ---
 

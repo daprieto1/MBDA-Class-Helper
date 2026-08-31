@@ -81,6 +81,152 @@ Los dos conceptos más relevantes son **Servicio** y **Asignacion**: el primero 
 
 ---
 
+## Modelo conceptual extendido — Servicios y Asignaciones (con atributos, tipos y reglas de negocio)
+
+Se incorporan atributos y reglas de negocio exclusivamente para las clases detalladas en las secciones SERVICIOS y ASIGNACIONES del enunciado. Las demás clases se mantienen sin atributos.
+
+### Reglas de negocio modeladas
+
+1. **Formato de identificador** → `identificador [1] : String` con restricción de formato `S-####` (ej.: S-0001).
+2. **Título de observación único** → `titulo [1] : String` en `Observacion` con restricción `{unique}` dentro de su asignación.
+3. **Tipos de servicio fijos** → Enumeración `TipoServicio` con valores Inmovilización, Traslado, Custodia. Expresada como atributo `tipo [1] : TipoServicio`.
+4. **Duración derivada** → `duracion [0..1] : Duration` en `Servicio` se calcula como `fechaHoraFinalizacion − fechaHoraInicio`. Restricción: no puede superar una semana. Es `[0..1]` porque no existe hasta que el servicio finaliza.
+5. **Observaciones con máximo de 500 caracteres** → `descripcion [1] : String(500)`. La longitud máxima se expresa en el tipo.
+6. **Fecha de cancelación nullable** → `fechaCancelacion [0..1] : DateTime`. La opcionalidad se expresa con la cardinalidad `[0..1]` en el atributo. Se registra automáticamente cuando el servicio asociado es cancelado.
+7. **Cardinalidad de atributos** → `fechaHoraInicio` y `fechaHoraFinalizacion` son `[0..1]` porque no existen al momento de la solicitud. Los demás atributos obligatorios se marcan `[1]`.
+8. **Enumeraciones fuera del diagrama** → Para reducir la carga visual, las cuatro enumeraciones (`AlcanceGeografico`, `TipoServicio`, `EstadoServicio`, `EstadoAsignacion`) se documentan únicamente en la sección de tipos enumerados. Se referencian como tipos en los atributos de `Servicio` y `Asignacion`.
+
+```mermaid
+classDiagram
+    class Servicio {
+        +identificador [1] : String
+        +fechaHoraSolicitud [1] : DateTime
+        +fechaHoraInicio [0..1] : DateTime
+        +fechaHoraFinalizacion [0..1] : DateTime
+        +duracion [0..1] : Duration
+        +origen [1] : String
+        +destino [1] : String
+        +costo [1] : Decimal
+        +observaciones [0..1] : String
+        +alcance [1] : AlcanceGeografico
+        +tipo [1] : TipoServicio
+        +estado [1] : EstadoServicio
+    }
+
+    class Asignacion {
+        +fechaHoraAsignacion [1] : DateTime
+        +fechaCancelacion [0..1] : DateTime
+        +estado [1] : EstadoAsignacion
+    }
+
+    class Observacion {
+        +titulo [1] : String
+        +descripcion [1] : String(500)
+    }
+
+    class Novedad
+
+    class Cliente
+    class ClientePublico
+    class ClientePrivado
+    class EntidadGubernamental
+    class Convenio
+    class Vehiculo {
+        +categoria [1] : CategoriaVehicular
+    }
+    class Conductor
+    class Licencia {
+        +categoria [1] : CategoriaVehicular
+    }
+    class Mantenimiento
+    class Facturacion
+
+    Cliente <|-- ClientePublico
+    Cliente <|-- ClientePrivado
+    ClientePublico "1" -- "1" EntidadGubernamental : corresponde a
+    EntidadGubernamental "1" -- "1..*" Convenio : establece
+    Cliente "1" -- "0..*" Servicio : solicita
+    Servicio "1" -- "0..*" Asignacion : tiene
+    Servicio "1" -- "0..*" Novedad : presenta
+    Servicio "1" -- "0..1" Facturacion : genera
+    Asignacion "1" -- "0..*" Observacion : registra
+    Asignacion "*" -- "1" Vehiculo : asigna
+    Asignacion "*" -- "1" Conductor : asigna
+    Conductor "1" -- "1..*" Licencia : posee
+    Vehiculo "1" -- "0..*" Mantenimiento : tiene
+```
+
+> **Atributo derivado:** `Servicio.duracion` se calcula como `fechaHoraFinalizacion − fechaHoraInicio`. No se almacena directamente; se deriva de los dos atributos de fecha/hora. Mermaid no soporta el prefijo `/` de UML para derivados, por lo que se documenta aquí.
+
+> **Restricciones no expresables en el diagrama:**
+> - `Servicio.identificador` debe seguir el formato `S-####` (ej.: S-0001).
+> - `Observacion.titulo` debe ser único dentro de su asignación `{unique}`.
+> - `Servicio.duracion` no puede superar una semana.
+> - Solo servicios con `estado = finalizado` pueden generar `Facturacion`.
+> - `Asignacion.fechaCancelacion` se registra automáticamente al cancelar el servicio asociado.
+> - No se puede vincular el mismo vehículo ni el mismo conductor a dos servicios simultáneamente.
+> - Una asignación solo puede realizarse si el vehículo está disponible y el conductor habilitado con licencia vigente.
+> - En una asignación, `Licencia.categoria` del conductor debe corresponder a `Vehiculo.categoria` del vehículo asignado.
+
+> **Cardinalidades en atributos:** La notación `[1]` indica atributo obligatorio, `[0..1]` indica atributo opcional (nullable). `fechaHoraInicio`, `fechaHoraFinalizacion` y `duracion` son `[0..1]` porque no existen al momento de la solicitud; se completan conforme avanza el ciclo de vida del servicio. `String(500)` indica longitud máxima de 500 caracteres.
+
+### Tipos enumerados
+
+#### `EstadoServicio`
+
+Controla el ciclo de vida del servicio y determina qué operaciones son válidas en cada fase.
+
+| Valor | Descripción |
+|---|---|
+| `solicitado` | Estado inicial. El cliente ha solicitado el servicio pero aún no se asignan recursos. |
+| `asignado` | Se ha vinculado un vehículo disponible y un conductor habilitado mediante una asignación. |
+| `enProceso` | El servicio está en ejecución. Durante esta fase pueden registrarse novedades. |
+| `finalizado` | El servicio concluyó exitosamente. **Único estado que permite generar facturación.** |
+| `cancelado` | El servicio fue cancelado. La asignación asociada se libera automáticamente y se registra la fecha de cancelación. |
+
+#### `EstadoAsignacion`
+
+Gobierna la disponibilidad de recursos (vehículo y conductor) vinculados a un servicio.
+
+| Valor | Descripción |
+|---|---|
+| `pendiente` | La asignación fue creada pero aún no está activa. |
+| `activa` | El vehículo y el conductor están comprometidos con el servicio. No pueden asignarse a otro servicio simultáneamente. |
+| `cancelada` | La asignación fue liberada (por cancelación del servicio). Se registra `fechaCancelacion` automáticamente. |
+| `completada` | La asignación finalizó exitosamente junto con el servicio. |
+
+#### `TipoServicio`
+
+Clasifica el servicio según la naturaleza de la operación solicitada por el cliente.
+
+| Valor | Descripción |
+|---|---|
+| `inmovilizacion` | Retiro e inmovilización de un vehículo por orden de autoridad u otra causa. |
+| `traslado` | Transporte de un vehículo de un punto de origen a un destino. |
+| `custodia` | Resguardo temporal de un vehículo en instalaciones de la empresa. |
+
+#### `AlcanceGeografico`
+
+Clasifica el servicio según su cobertura territorial, lo que puede incidir en el costo y la disponibilidad de recursos.
+
+| Valor | Descripción |
+|---|---|
+| `urbano` | Servicio dentro de una misma ciudad o área metropolitana. |
+| `intermunicipal` | Servicio entre municipios dentro de un mismo departamento o región. |
+| `nacional` | Servicio entre departamentos o con cobertura a nivel país. |
+
+#### `CategoriaVehicular`
+
+Clasifica vehículos y licencias según la categoría vehicular. La asignación requiere que la categoría de la licencia del conductor corresponda a la del vehículo.
+
+| Valor | Descripción |
+|---|---|
+| `liviano` | Vehículos livianos (automóviles, camionetas). |
+| `pesado` | Vehículos pesados (camiones, tractomulas). |
+| `especial` | Vehículos especiales (maquinaria, transporte excepcional). |
+
+---
+
 ## Supuestos explícitos
 
 - **EntidadGubernamental como clase separada:** Aunque la relación entre ClientePublico y EntidadGubernamental es 1 a 1, se modelan como clases distintas porque el enunciado las presenta como conceptos diferenciables: el cliente público es quien solicita servicios, mientras que la entidad gubernamental es la organización a la que pertenecen los convenios. Esta separación permite expresar con claridad que los convenios se establecen a nivel de la entidad, no del cliente individual.
@@ -94,6 +240,14 @@ Los dos conceptos más relevantes son **Servicio** y **Asignacion**: el primero 
 - **Multiplicidad Servicio–Asignacion (1 a 0..*):** Se asume que un servicio puede tener múltiples asignaciones a lo largo del tiempo (ej.: si una asignación se cancela y se crea una nueva con otro vehículo/conductor). En un momento dado, solo una asignación puede estar activa por servicio.
 
 - **Facturación como entidad separada:** El enunciado establece que "únicamente los servicios en estado finalizado pueden generar facturación". Se modela `Facturacion` como entidad independiente relacionada con Servicio (multiplicidad `0..1`: un servicio finalizado puede generar a lo sumo una facturación, y un servicio no finalizado no genera ninguna). La restricción de que solo servicios finalizados generan facturación es una regla de negocio que se documenta como constraint, ya que no es expresable solo con multiplicidades.
+
+- **`observaciones` en Servicio como atributo de texto:** La sección SERVICIOS lista "observaciones" entre los datos registrados del servicio. Se modela como atributo de texto simple (`String`) en `Servicio`, distinto de la entidad `Observacion` (título + descripción) que pertenece a `Asignacion`.
+
+- **Unicidad de título de Observacion por asignación:** La regla dice que "el título de cada observación de la asignación debe ser único". Se interpreta como unicidad dentro del alcance de una asignación (no global del sistema), ya que el enunciado dice "de la asignación".
+
+- **Duración como Duration:** Se usa el tipo `Duration` (no `int` ni `Decimal`) para representar la duración del servicio, ya que se calcula como diferencia entre dos `DateTime` y debe validarse contra el máximo de una semana.
+
+- **Valores de CategoriaVehicular:** El enunciado menciona "la categoría del vehículo" sin especificar los valores concretos. Se asumen tres categorías razonables (`liviano`, `pesado`, `especial`) como interpretación didáctica. En un caso real, estos valores se obtendrían de la normativa de tránsito aplicable.
 
 - **Mantenimiento como entidad separada:** El enunciado menciona "en mantenimiento" como estado operativo del vehículo. Se modela Mantenimiento como entidad independiente porque un vehículo puede tener múltiples mantenimientos a lo largo del tiempo, cada uno con identidad propia (fechas, tipo, estado). El estado "en mantenimiento" del vehículo se deriva de la existencia de un mantenimiento activo asociado.
 

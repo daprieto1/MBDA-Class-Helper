@@ -9,6 +9,8 @@ classDiagram
     class Cliente
     class ClientePublico
     class ClientePrivado
+    class ClienteNatural
+    class ClienteJuridico
     class EntidadGubernamental
     class Convenio
     class Vehiculo
@@ -23,6 +25,8 @@ classDiagram
 
     Cliente <|-- ClientePublico
     Cliente <|-- ClientePrivado
+    ClientePrivado <|-- ClienteNatural
+    ClientePrivado <|-- ClienteJuridico
     ClientePublico "1" -- "1" EntidadGubernamental : corresponde a
     EntidadGubernamental "1" -- "1..*" Convenio : establece
     Cliente "1" -- "0..*" Servicio : solicita
@@ -38,7 +42,7 @@ classDiagram
 
 > **Nota sobre EntidadGubernamental:** El enunciado indica que los clientes públicos "corresponden a entidades gubernamentales" y que cada convenio "pertenece exclusivamente a una sola entidad". Se modela `EntidadGubernamental` como clase separada para hacer explícito que los convenios pertenecen a la entidad gubernamental (no directamente al cliente público), y que cada cliente público corresponde a exactamente una entidad gubernamental.
 
-> **Nota sobre herencia:** La jerarquía Cliente → ClientePublico / ClientePrivado es **{disjunta, completa}**: todo cliente es necesariamente público o privado (no mixto) y no existen clientes genéricos sin subtipo.
+> **Nota sobre herencia:** La jerarquía Cliente → ClientePublico / ClientePrivado es **{disjunta, completa}**: todo cliente es necesariamente público o privado (no mixto) y no existen clientes genéricos sin subtipo. Dentro de ClientePrivado, la jerarquía ClientePrivado → ClienteNatural / ClienteJuridico es también **{disjunta, completa}**: el enunciado indica que los clientes privados "pueden ser personas naturales o jurídicas" con atributos distintos para cada uno (`nombre` vs `razonSocial`).
 
 > **Nota sobre Facturacion:** La relación `Servicio "1" -- "0..1" Facturacion` captura que un servicio puede tener a lo sumo una facturación. Sin embargo, la restricción de que **solo servicios en estado finalizado** pueden generarla es una regla de negocio (constraint `{estado = finalizado}`) que no se puede expresar únicamente con multiplicidades en el diagrama.
 
@@ -128,7 +132,17 @@ classDiagram
 
     class Cliente
     class ClientePublico
-    class ClientePrivado
+    class ClientePrivado {
+        +documento [1] : String
+        +tipoIdentificacion [1] : String
+        +direccion [1] : String
+    }
+    class ClienteNatural {
+        +nombre [1] : String
+    }
+    class ClienteJuridico {
+        +razonSocial [1] : String
+    }
     class EntidadGubernamental
     class Convenio
     class Vehiculo {
@@ -143,6 +157,8 @@ classDiagram
 
     Cliente <|-- ClientePublico
     Cliente <|-- ClientePrivado
+    ClientePrivado <|-- ClienteNatural
+    ClientePrivado <|-- ClienteJuridico
     ClientePublico "1" -- "1" EntidadGubernamental : corresponde a
     EntidadGubernamental "1" -- "1..*" Convenio : establece
     Cliente "1" -- "0..*" Servicio : solicita
@@ -230,6 +246,8 @@ Clasifica vehículos y licencias según la categoría vehicular. La asignación 
 ## Supuestos explícitos
 
 - **EntidadGubernamental como clase separada:** Aunque la relación entre ClientePublico y EntidadGubernamental es 1 a 1, se modelan como clases distintas porque el enunciado las presenta como conceptos diferenciables: el cliente público es quien solicita servicios, mientras que la entidad gubernamental es la organización a la que pertenecen los convenios. Esta separación permite expresar con claridad que los convenios se establecen a nivel de la entidad, no del cliente individual.
+
+- **ClienteNatural y ClienteJuridico como subclases de ClientePrivado:** El enunciado dice que los clientes privados "pueden ser personas naturales o jurídicas" y asigna atributos condicionales distintos: `nombre` (si es persona natural) y `razonSocial` (si es persona jurídica). Se modela como una segunda jerarquía {disjunta, completa} bajo `ClientePrivado`, donde los atributos comunes (`documento`, `tipoIdentificacion`, `direccion`) permanecen en la superclase. Alternativa válida: mantener todo en `ClientePrivado` con atributos opcionales y una restricción externa.
 
 - **Conductor como entidad independiente:** El enunciado menciona conductores en el contexto de asignaciones y licencias, pero no los describe en una sección dedicada. Se asume que Conductor es una entidad del dominio con identidad propia (nombre, datos de contacto, estado habilitado/inhabilitado).
 

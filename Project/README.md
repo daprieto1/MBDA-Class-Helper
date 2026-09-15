@@ -1,3 +1,72 @@
+# IRONMAN Race Management — Project
+
+## Setup Local Database
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) y Docker Compose
+
+### Levantar la base de datos
+
+```bash
+cd Project
+docker compose up -d
+```
+
+Esto inicia un contenedor PostgreSQL 16 con la base de datos `ironman`. Los scripts SQL en `1. Structure/` se ejecutan automáticamente en orden al crear el contenedor por primera vez:
+
+| Archivo | Descripción |
+|---|---|
+| `1-Tables.sql` | Estructura base de tablas |
+| `2-Attributes.sql` | Dominios y tipos de atributos |
+| `3-Primaries.sql` | Llaves primarias |
+| `4-Uniques.sql` | Restricciones de unicidad |
+| `5-Foreign.sql` | Llaves foráneas |
+| `6-PopulateOK.sql` | Datos válidos de prueba |
+| `7-PopulateNOOK.sql` | Datos inválidos (pruebas de restricciones) |
+| `8-Queries.sql` | Consultas de ejemplo |
+| `9-XPopulate.sql` | Datos adicionales |
+| `10-XTables.sql` | Tablas adicionales |
+
+### Conexión
+
+```
+Host:     localhost
+Port:     5432
+Database: ironman
+User:     ironman
+Password: ironman
+```
+
+Con `psql`:
+
+```bash
+docker exec -it ironman-db psql -U ironman -d ironman
+```
+
+O desde tu máquina (requiere `psql` instalado):
+
+```bash
+psql -h localhost -p 5432 -U ironman -d ironman
+```
+
+### Reiniciar la base de datos desde cero
+
+```bash
+docker compose down -v
+docker compose up -d
+```
+
+El flag `-v` elimina el volumen de datos, forzando la re-ejecución de los scripts de inicialización.
+
+### Detener
+
+```bash
+docker compose down
+```
+
+---
+
 # PROJECT FORMULATION
 
 ## A. Identification

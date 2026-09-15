@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: ironman-db
+    environment:
+      POSTGRES_USER: ironman
+      POSTGRES_PASSWORD: ironman
+      POSTGRES_DB: ironman
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./1. Structure:/docker-entrypoint-initdb.d
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

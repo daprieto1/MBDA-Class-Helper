@@ -167,6 +167,129 @@ classDiagram
 
 ---
 
+## Strategic CEO Queries — Business Intelligence for Decision-Making
+
+The following queries are designed for the **CEO / executive leadership** of IRONMAN. Each one extracts actionable insights from the database to support strategic decisions about growth, athlete engagement, geographic expansion, and event optimization.
+
+---
+
+### Q1. Year-over-Year Growth by Distance Format
+
+> **Decision it enables:** *Which race formats are growing and which are stagnating? Should we invest in more HALF (70.3) events or double down on FULL distance?*
+
+**What the CEO sees:** A table showing how each distance format performs year over year — total races offered, total registrations, and average athletes per race. This reveals whether SPRINT attracts new athletes, whether FULL is saturating, and where the average participation per event is rising or falling.
+
+---
+
+### Q2. Top 10 Countries by Athlete Volume — Geographic Expansion Opportunities
+
+> **Decision it enables:** *Where is our athlete base concentrated, and which emerging markets should we target for new events?*
+
+**What the CEO sees:** The top 10 countries ranked by athlete count, alongside a loyalty metric (races per athlete). A country with many athletes but low races-per-athlete signals an underserved market needing more local events.
+
+---
+
+### Q3. Athlete Retention — Repeat Participation Across Seasons
+
+> **Decision it enables:** *Are we retaining athletes season over season, or are we dependent on one-time participants?*
+
+**What the CEO sees:** A year-by-year retention rate showing active athletes, returning athletes from the previous season, and the retention percentage. If only 30% of athletes return, the business is heavily acquisition-dependent — a signal to invest in loyalty programs or progressive race paths (SPRINT → OLYMPIC → HALF → FULL).
+
+---
+
+### Q4. Qualification Slot Demand vs. Supply — Championship Access Bottleneck
+
+> **Decision it enables:** *Are there enough qualification slots relative to demand? Which age groups are underserved?*
+
+**What the CEO sees:** The ratio of athletes competing for each qualification slot, broken down by age group and sex. An "athletes per slot" of 50:1 in M30-34 versus 5:1 in M60-64 reveals where demand vastly outstrips supply — an opportunity to add championship slots or more qualifying events for high-demand groups.
+
+---
+
+### Q5. Race Performance by City — Where to Expand or Cut
+
+> **Decision it enables:** *Which host cities deliver the highest participation? Which events should be discontinued or relocated?*
+
+**What the CEO sees:** A city-by-city scorecard showing editions held, total athletes across all editions, average athletes per edition, and average finish rate. Low average attendance or declining finish rates may indicate logistical problems, poor course conditions, or market saturation — actionable data for event portfolio decisions.
+
+---
+
+### Q6. Gender Participation Gap Analysis
+
+> **Decision it enables:** *How balanced is our gender participation? Where should we invest in women-targeted marketing or programs?*
+
+**What the CEO sees:** The male/female participation split for each distance format, per year, shown as both absolute count and percentage. If FULL distance is 85% male but SPRINT is 60/40, that suggests the shorter formats are a better gateway for women — informing targeted acquisition campaigns and event design.
+
+---
+
+### Q7. Elite vs. Age-Group Performance Trends — Points Inflation Check
+
+> **Decision it enables:** *Is the points system working correctly, or is points inflation diluting the ranking's value?*
+
+**What the CEO sees:** Average, maximum, minimum, and standard deviation of points earned per age group across seasons. If average points are climbing uniformly, the points scale might need recalibration. High standard deviations within a group indicate competitive balance; low stddev suggests the ranking is too flat.
+
+---
+
+### Q8. DNF/DNS Rate by Distance — Athlete Experience & Safety Indicator
+
+> **Decision it enables:** *Are certain race distances causing too many dropouts? Is there a safety or course-design issue?*
+
+**What the CEO sees:** Total registrations, finishers, DNF/DNS count, and dropout rate per distance format. A FULL distance DNF rate of 15% versus 3% for SPRINT is expected — but if any format suddenly spikes, it could signal course problems, inadequate athlete preparation, or extreme weather events worth investigating.
+
+---
+
+### Q9. Championship Qualification Pipeline — Conversion Funnel
+
+> **Decision it enables:** *Of all athletes who compete in qualifiers, how many actually earn a slot? Is the qualification path motivating or discouraging participation?*
+
+```sql
+SELECT
+    s.year,
+    COUNT(DISTINCT reg.athlete_id)  AS athletes_in_qualifiers,
+    COUNT(DISTINCT qs.athlete_id)   AS athletes_who_qualified,
+    ROUND(
+        COUNT(DISTINCT qs.athlete_id) * 100.0 /
+        NULLIF(COUNT(DISTINCT reg.athlete_id), 0),
+    1) AS qualification_rate_pct
+FROM season s
+JOIN race r ON r.season_id = s.id AND r.race_type = 'QUALIFIER'
+JOIN registration reg ON reg.race_id = r.id
+LEFT JOIN qualification_slot qs ON qs.qualifying_race_id = r.id AND qs.athlete_id = reg.athlete_id
+GROUP BY s.year
+ORDER BY s.year;
+```
+
+**What the CEO sees:** The percentage of qualifier participants who actually earn a championship slot. If only 2% qualify, the path might feel unattainable — prompting the CEO to consider adding slots, creating tiered championships, or introducing a legacy qualification program.
+
+---
+
+### Q10. Multi-Race Athletes — High-Value Customer Identification
+
+> **Decision it enables:** *Who are our most engaged athletes? Can we build VIP programs, sponsorship pipelines, or ambassador networks around them?*
+
+```sql
+SELECT
+    a.id,
+    a.first_name || ' ' || a.last_name AS athlete_name,
+    a.nationality,
+    COUNT(DISTINCT reg.race_id)         AS races_entered,
+    COUNT(DISTINCT r.distance)          AS distances_tried,
+    COUNT(DISTINCT qs.id)               AS slots_won,
+    COALESCE(MAX(rk.rank_position), 0)  AS best_ranking_position
+FROM athlete a
+JOIN registration reg ON reg.athlete_id = a.id
+JOIN race r ON r.id = reg.race_id
+LEFT JOIN qualification_slot qs ON qs.athlete_id = a.id
+LEFT JOIN ranking rk ON rk.athlete_id = a.id
+GROUP BY a.id, a.first_name, a.last_name, a.nationality
+HAVING COUNT(DISTINCT reg.race_id) >= 3
+ORDER BY races_entered DESC, slots_won DESC
+LIMIT 20;
+```
+
+**What the CEO sees:** The top 20 most active athletes with their engagement profile. These are the brand ambassadors, the repeat customers, the athletes who should receive VIP treatment — and whose feedback is most valuable for product decisions.
+
+---
+
 ## Explicit Assumptions
 
 - **Age-group is computed per registration, not stored on the athlete.** An athlete's age changes over time, so their age-group may differ between races in the same season. The AgeGroup is assigned at registration time based on DOB and race date.

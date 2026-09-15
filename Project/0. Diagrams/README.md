@@ -241,24 +241,7 @@ The following queries are designed for the **CEO / executive leadership** of IRO
 
 > **Decision it enables:** *Of all athletes who compete in qualifiers, how many actually earn a slot? Is the qualification path motivating or discouraging participation?*
 
-```sql
-SELECT
-    s.year,
-    COUNT(DISTINCT reg.athlete_id)  AS athletes_in_qualifiers,
-    COUNT(DISTINCT qs.athlete_id)   AS athletes_who_qualified,
-    ROUND(
-        COUNT(DISTINCT qs.athlete_id) * 100.0 /
-        NULLIF(COUNT(DISTINCT reg.athlete_id), 0),
-    1) AS qualification_rate_pct
-FROM season s
-JOIN race r ON r.season_id = s.id AND r.race_type = 'QUALIFIER'
-JOIN registration reg ON reg.race_id = r.id
-LEFT JOIN qualification_slot qs ON qs.qualifying_race_id = r.id AND qs.athlete_id = reg.athlete_id
-GROUP BY s.year
-ORDER BY s.year;
-```
-
-**What the CEO sees:** The percentage of qualifier participants who actually earn a championship slot. If only 2% qualify, the path might feel unattainable — prompting the CEO to consider adding slots, creating tiered championships, or introducing a legacy qualification program.
+**What the CEO sees:** A year-by-year funnel showing athletes who competed in qualifiers, athletes who earned a slot, and the qualification conversion rate. If only 2% qualify, the path might feel unattainable — prompting the CEO to consider adding slots, creating tiered championships, or introducing a legacy qualification program.
 
 ---
 
@@ -266,27 +249,7 @@ ORDER BY s.year;
 
 > **Decision it enables:** *Who are our most engaged athletes? Can we build VIP programs, sponsorship pipelines, or ambassador networks around them?*
 
-```sql
-SELECT
-    a.id,
-    a.first_name || ' ' || a.last_name AS athlete_name,
-    a.nationality,
-    COUNT(DISTINCT reg.race_id)         AS races_entered,
-    COUNT(DISTINCT r.distance)          AS distances_tried,
-    COUNT(DISTINCT qs.id)               AS slots_won,
-    COALESCE(MAX(rk.rank_position), 0)  AS best_ranking_position
-FROM athlete a
-JOIN registration reg ON reg.athlete_id = a.id
-JOIN race r ON r.id = reg.race_id
-LEFT JOIN qualification_slot qs ON qs.athlete_id = a.id
-LEFT JOIN ranking rk ON rk.athlete_id = a.id
-GROUP BY a.id, a.first_name, a.last_name, a.nationality
-HAVING COUNT(DISTINCT reg.race_id) >= 3
-ORDER BY races_entered DESC, slots_won DESC
-LIMIT 20;
-```
-
-**What the CEO sees:** The top 20 most active athletes with their engagement profile. These are the brand ambassadors, the repeat customers, the athletes who should receive VIP treatment — and whose feedback is most valuable for product decisions.
+**What the CEO sees:** The top 20 most active athletes (3+ races) with their full engagement profile: name, nationality, races entered, distinct distances tried, qualification slots won, and best ranking position. These are the brand ambassadors, the repeat customers, the athletes who should receive VIP treatment — and whose feedback is most valuable for product decisions.
 
 ---
 

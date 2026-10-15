@@ -234,6 +234,14 @@ BEGIN
     -- Obtener el precio actual de la parte
     SELECT precio INTO NEW.precio FROM partes WHERE p = NEW.parte;
 
+    -- Si la parte es P1 y el vendedor es V1, la cantidad debe ser 25
+    IF NEW.parte = 'P1' AND NEW.vendedor = 'V1' THEN
+        NEW.cant := 25;
+    END IF;
+
+    -- El precio total es cantidad * precio unitario
+    NEW.precio := NEW.cant * NEW.precio;
+
     -- RETURN NEW: permite la insercion con los valores calculados
     RETURN NEW;
 END;
